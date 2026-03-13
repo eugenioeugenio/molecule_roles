@@ -1,0 +1,64 @@
+---
+# tasks file for apache
+
+- name: Install Apache package
+  apt:
+    name: apache2
+    update_cache: yes
+    state: latest
+  become: true
+  tags: [ apache ]
+
+- name: Create document root
+  file:
+    path: "/var/www/{{ lamp_http_host | default('localhost') }}"
+    state: directory
+    owner: "www-data"
+    group: "www-data"
+    mode: '0755'
+  become: true
+  tags: [ apache ]
+
+- name: Create a test index.html
+  copy:
+    content: "<html><body><h1>Apache is working</h1></body></html>"
+    dest: "/var/www/{{ lamp_http_host | default('localhost') }}/index.html"
+  become: true
+  tags: [ apache ]
+
+
+- name: Set up Apache VirtualHost
+  template:
+    src: "../templates/apache.conf.j2" # Путь к шаблону относительно папки templates/
+    dest: "/etc/apache2/sites-available/{{ lamp_http_conf | default('apache.conf') }}"
+  become: true
+  notify: Reload Apache
+  tags: [ apache ]
+
+- name: Enable rewrite module
+  apache2_module:
+    state: present
+    name: rewrite
+  become: true
+  notify: Reload Apache
+  tags: [ apache ]
+
+- name: Enable new site
+  shell: /usr/sbin/a2ensite {{ lamp_http_conf | default('apache.conf') }}
+  become: true
+  notify: Reload Apache
+  tags: [ apache, molecule-idempotence-notest ]
+
+- name: Disable default Apache site
+  shell: /usr/sbin/a2dissite 000-default.conf
+  become: true
+  notify: Restart Apache
+  tags: [ apache, molecule-idempotence-notest ]
+
+- name: "UFW - Allow HTTP on port {{ lamp_http_port | default(80) }}"
+  ufw:
+    rule: allow
+    port: "{{ lamp_http_port | default(80) }}"
+    proto: tcp
+  become: true
+  tags: [ system, molecule-idempotence-notest ]

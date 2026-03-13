@@ -1,0 +1,36 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars:
+    lamp_http_host: "your_domain"
+  tasks:
+    - name: Ensure the target directory exists
+      file:
+        path: "/var/www/localhost/wordpress"
+        state: directory
+       # owner: root
+       # group: root
+        mode: '0755'
+    - name: Create a simple test file in localhost root
+      copy:
+        dest: "/var/www/localhost/wordpress/index.html"
+        content: "It works"
+      #  owner: root
+      #  group: root
+        mode: '0644'
+    - name: Verify Apache is serving web requests
+      uri:
+        url: "http://127.0.0.1/"
+        # 2. Указываем ТОТ ЖЕ домен (Host), что и в переменной lamp_http_host
+        headers:
+          Host: "localhost"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 3
+      delay: 5
+    - name: Remove the index.html file
+      file:
+        path: "/var/www/{{ lamp_http_host }}/wordpress/index.html"
+        state: absent

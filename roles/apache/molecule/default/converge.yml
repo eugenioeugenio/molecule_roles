@@ -1,0 +1,24 @@
+
+
+---
+- name: Converge
+  hosts: all
+
+  handlers:
+    - name: Reload Apache
+      service:
+        name: apache2
+        state: reloaded
+      become: true
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+      become: true
+
+  tasks:
+    - name: "Run apache role tasks"
+      include_tasks: "../../tasks/main.yml"
+
+
